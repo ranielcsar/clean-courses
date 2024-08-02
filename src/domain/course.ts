@@ -5,7 +5,7 @@ import { Lesson } from "./lesson"
 
 export class Course {
     constructor(
-        private id: string,
+        private courseId: string,
         private name: string,
         private category: CategoryEnum,
         private status: StatusEnum,
@@ -33,7 +33,7 @@ export class Course {
     }
 
     getId() {
-        return this.id
+        return this.courseId
     }
 
     getName() {
