@@ -1,11 +1,10 @@
 import { CategoryEnum, StatusEnum } from "@/domain/enum"
-import { CreateNewCourse } from "@/app/usecases/course/create"
-import { GetCourse } from "@/app/usecases/course/get"
+import { CreateNewCourse, GetCourse, UpdateCourse } from "@/app/usecases/course"
 import {
     CourseRepositoryMemory,
-    // CourseRepositoryDb,
+    CourseRepositoryDb,
 } from "@/infra/repository/course-repository"
-// import { PgPromiseAdapter } from "@/infra/db/db-connection"
+import { PgPromiseAdapter } from "@/infra/db/db-connection"
 
 function randomValueFromEnum(enumarator: Record<string, string>) {
     let key: string | string[] = Object.keys(enumarator)
@@ -13,15 +12,19 @@ function randomValueFromEnum(enumarator: Record<string, string>) {
     return enumarator[key]
 }
 
-// const conn = new PgPromiseAdapter()
-// afterAll(async () => {
-//     await conn.close()
-// })
+let createCourse: CreateNewCourse
+let getCourse: GetCourse
+let updateCourse: UpdateCourse
+
+beforeEach(async () => {
+    const conn = new PgPromiseAdapter()
+    const courseRepo = new CourseRepositoryDb(conn)
+    createCourse = new CreateNewCourse(courseRepo)
+    getCourse = new GetCourse(courseRepo)
+    updateCourse = new UpdateCourse(courseRepo)
+})
 
 test("Deve criar um novo curso", async () => {
-    const courseRepo = new CourseRepositoryMemory()
-    const createCourse = new CreateNewCourse(courseRepo)
-    const getCourse = new GetCourse(courseRepo)
     const input = {
         name: `Curso ${Math.floor(Math.random() * 1200)}`,
         category: randomValueFromEnum(CategoryEnum) as CategoryEnum,
@@ -30,14 +33,29 @@ test("Deve criar um novo curso", async () => {
     }
     const outputCreate = await createCourse.execute(input)
     expect(outputCreate.courseId).toBeDefined()
-    const newCourse = await getCourse.execute(outputCreate.courseId)
-    expect(newCourse.name).toBe(input.name)
-    expect(newCourse.category).toBe(input.category)
-    expect(newCourse.status).toBe(input.status)
 })
 
 test("Deve listar cursos", async () => {
-    const courseRepo = new CourseRepositoryMemory()
+    const conn = new PgPromiseAdapter()
+    const courseRepo = new CourseRepositoryDb(conn)
     const outputList = await courseRepo.list()
     expect(Array.isArray(outputList)).toBe(true)
+})
+
+test("Deve atualizar um curso existente", async () => {
+    const input = {
+        name: `Curso ${Math.floor(Math.random() * 1200)}`,
+        category: randomValueFromEnum(CategoryEnum) as CategoryEnum,
+        status: randomValueFromEnum(StatusEnum) as StatusEnum,
+        lessons: [],
+    }
+    const outputCreate = await createCourse.execute(input)
+    expect(outputCreate.courseId).toBeDefined()
+
+    input.name = `Curso ${Math.floor(Math.random() * 1200)}`
+    await updateCourse.execute(outputCreate.courseId, input)
+    const updatedCourse = await getCourse.execute(outputCreate.courseId)
+    expect(updatedCourse.name).toBe(input.name)
+    expect(updatedCourse.category).toBe(input.category)
+    expect(updatedCourse.status).toBe(input.status)
 })
