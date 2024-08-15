@@ -6,8 +6,13 @@ import { CourseRepository } from "@/infra/repository/course-repository"
 export class CreateNewCourse {
     constructor(readonly courseRepository: CourseRepository) {}
 
-    async execute(input: Input): Promise<any> {
-        const course = Course.create(input.name, input.category, input.status)
+    async execute(input: Input): Promise<{ courseId: string }> {
+        const course = Course.create(
+            input.name,
+            input.category,
+            input.status,
+            input.lessons
+        )
         await this.courseRepository.create(course)
         return { courseId: course.getId() }
     }
