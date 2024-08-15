@@ -3,10 +3,10 @@ import DatabaseConnection from "@/infra/db/db-connection"
 import crypto from "crypto"
 
 export interface CourseRepository {
-    create(input: any): Promise<boolean>
-    list(): Promise<any>
-    get(id: string): Promise<any>
-    update(id: string, input: any): Promise<any>
+    create(input: Course): Promise<boolean>
+    list(): Promise<Course[]>
+    get(id: string): Promise<Course | undefined>
+    update(id: string, input: Course): Promise<boolean>
 }
 
 export class CourseRepositoryDb implements CourseRepository {
@@ -25,7 +25,7 @@ export class CourseRepositoryDb implements CourseRepository {
         }
     }
 
-    async list(): Promise<any> {
+    async list(): Promise<Course[]> {
         const courses = await this.connection.query(
             "SELECT * FROM courses.course LIMIT 10",
             []
@@ -36,7 +36,7 @@ export class CourseRepositoryDb implements CourseRepository {
         )
     }
 
-    async get(id: string): Promise<any> {
+    async get(id: string): Promise<Course | undefined> {
         const [course] = await this.connection.query(
             "SELECT * FROM courses.course WHERE course_id = $1",
             [id]
@@ -52,31 +52,46 @@ export class CourseRepositoryDb implements CourseRepository {
         )
     }
 
-    async update(id: string, input: any): Promise<any> {
-        await this.connection.query(
-            "UPDATE courses.course SET name = $1, category = $2, status = $3 WHERE course_id = $4",
-            [input.name, input.category, input.status, id]
-        )
+    async update(id: string, input: any): Promise<boolean> {
+        try {
+            await this.connection.query(
+                "UPDATE courses.course SET name = $1, category = $2, status = $3 WHERE course_id = $4",
+                [input.name, input.category, input.status, id]
+            )
+            // this.connection.close()
+            return true
+        } catch {
+            return false
+        }
         // this.connection.close()
     }
 }
 
 export class CourseRepositoryMemory implements CourseRepository {
-    courses: Course[] = []
+    courses = [] as Course[]
 
-    async create(input: any): Promise<any> {
-        const courseId = crypto.randomUUID()
-        this.courses.push({ ...input, courseId })
-        return { courseId }
+    async create(input: Course): Promise<boolean> {
+        this.courses.push(input)
+        return true
     }
 
     async list(): Promise<any> {
         return this.courses
     }
 
-    async get(id: string): Promise<any> {
-        const course = this.courses.find((c) => c.getId() === id)
-        return course
+    async get(id: string): Promise<Course | undefined> {
+        const course: any = this.courses.find((c: any) => {
+            if (c.courseId === id) return c
+        })
+        if (!course) return
+
+        return Course.restore(
+            course.courseId,
+            course.name,
+            course.category,
+            course.status,
+            course.lessons
+        )
     }
 
     async update(id: string, input: any): Promise<any> {
