@@ -1,6 +1,5 @@
 import { Course } from "@/domain/course"
 import DatabaseConnection from "@/infra/db/db-connection"
-import crypto from "crypto"
 
 export interface CourseRepository {
     create(input: Course): Promise<boolean>
